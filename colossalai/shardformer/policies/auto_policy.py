@@ -1,6 +1,5 @@
 import importlib
 from dataclasses import dataclass
-from typing import Optional
 
 import torch.nn as nn
 
@@ -69,6 +68,9 @@ _POLICY_LIST = {
         file_name="t5", class_name="T5ForConditionalGenerationPolicy"
     ),
     "transformers.models.t5.modeling_t5.T5EncoderModel": PolicyLocation(file_name="t5", class_name="T5EncoderPolicy"),
+    "transformers.models.t5.modeling_t5.T5ForTokenClassification": PolicyLocation(
+        file_name="t5", class_name="T5ForTokenClassificationPolicy"
+    ),
     # GPT2
     "transformers.models.gpt2.modeling_gpt2.GPT2Model": PolicyLocation(file_name="gpt2", class_name="GPT2ModelPolicy"),
     "transformers.models.gpt2.modeling_gpt2.GPT2LMHeadModel": PolicyLocation(
@@ -85,6 +87,17 @@ _POLICY_LIST = {
     ),
     "transformers.models.gpt2.modeling_gpt2.GPT2ForSequenceClassification": PolicyLocation(
         file_name="gpt2", class_name="GPT2ForSequenceClassificationPolicy"
+    ),
+    # GPTJ
+    "transformers.models.gptj.modeling_gptj.GPTJModel": PolicyLocation(file_name="gptj", class_name="GPTJModelPolicy"),
+    "transformers.models.gptj.modeling_gptj.GPTJForCausalLM": PolicyLocation(
+        file_name="gptj", class_name="GPTJForCausalLMPolicy"
+    ),
+    "transformers.models.gptj.modeling_gptj.GPTJForQuestionAnswering": PolicyLocation(
+        file_name="gptj", class_name="GPTJForQuestionAnsweringPolicy"
+    ),
+    "transformers.models.gptj.modeling_gptj.GPTJForSequenceClassification": PolicyLocation(
+        file_name="gptj", class_name="GPTJForSequenceClassificationPolicy"
     ),
     # ViT
     "transformers.models.vit.modeling_vit.ViTModel": PolicyLocation(file_name="vit", class_name="ViTModelPolicy"),
@@ -141,47 +154,87 @@ _POLICY_LIST = {
         file_name="blip2", class_name="Blip2ForConditionalGenerationPolicy"
     ),
     # ChatGLM
-    "colossalai.shardformer.modeling.chatglm2_6b.modeling_chatglm.ChatGLMModel": PolicyLocation(
+    "transformers_modules.modeling_chatglm.ChatGLMModel": PolicyLocation(
         file_name="chatglm2", class_name="ChatGLMModelPolicy"
     ),
-    "colossalai.shardformer.modeling.chatglm2_6b.modeling_chatglm.ChatGLMForConditionalGeneration": PolicyLocation(
+    "transformers_modules.modeling_chatglm.ChatGLMForConditionalGeneration": PolicyLocation(
         file_name="chatglm2", class_name="ChatGLMForConditionalGenerationPolicy"
     ),
+    # Deepseek
+    "transformers_modules.modeling_deepseek.DeepseekModel": PolicyLocation(
+        file_name="deepseek", class_name="DeepseekModelPolicy"
+    ),
+    "transformers_modules.modeling_deepseek.DeepseekForCausalLM": PolicyLocation(
+        file_name="deepseek", class_name="DeepseekForCausalLMPolicy"
+    ),
+    # DeepseekV3
+    "transformers_modules.modeling_deepseek.DeepseekV3Model": PolicyLocation(
+        file_name="deepseek_v3", class_name="DeepseekV3ModelPolicy"
+    ),
+    "transformers_modules.modeling_deepseek.DeepseekV3ForCausalLM": PolicyLocation(
+        file_name="deepseek_v3", class_name="DeepseekV3ForCausalLMPolicy"
+    ),
+    # Falcon
+    "transformers.models.falcon.modeling_falcon.FalconModel": PolicyLocation(
+        file_name="falcon", class_name="FalconModelPolicy"
+    ),
+    "transformers.models.falcon.modeling_falcon.FalconForCausalLM": PolicyLocation(
+        file_name="falcon", class_name="FalconForCausalLMPolicy"
+    ),
+    "transformers.models.falcon.modeling_falcon.FalconForSequenceClassification": PolicyLocation(
+        file_name="falcon", class_name="FalconForSequenceClassificationPolicy"
+    ),
+    "transformers.models.falcon.modeling_falcon.FalconForTokenClassification": PolicyLocation(
+        file_name="falcon", class_name="FalconForTokenClassificationPolicy"
+    ),
+    "transformers.models.falcon.modeling_falcon.FalconForQuestionAnswering": PolicyLocation(
+        file_name="falcon", class_name="FalconForQuestionAnsweringPolicy"
+    ),
+    # mistral
+    "transformers.models.mistral.modeling_mistral.MistralModel": PolicyLocation(
+        file_name="mistral", class_name="MistralModelPolicy"
+    ),
+    "transformers.models.mistral.modeling_mistral.MistralForCausalLM": PolicyLocation(
+        file_name="mistral", class_name="MistralForCausalLMPolicy"
+    ),
+    "transformers.models.mistral.modeling_mistral.MistralForSequenceClassification": PolicyLocation(
+        file_name="mistral", class_name="MistralForSequenceClassificationPolicy"
+    ),
+    # mixtral
+    "transformers.models.mixtral.modeling_mixtral.MixtralModel": PolicyLocation(
+        file_name="mixtral", class_name="MixtralModelPolicy"
+    ),
+    "transformers.models.mixtral.modeling_mixtral.MixtralForCausalLM": PolicyLocation(
+        file_name="mixtral", class_name="MixtralForCausalLMPolicy"
+    ),
+    "transformers.models.mixtral.modeling_mixtral.MixtralForSequenceClassification": PolicyLocation(
+        file_name="mixtral", class_name="MixtralForSequenceClassificationPolicy"
+    ),
+    # Qwen2
+    "transformers.models.qwen2.modeling_qwen2.Qwen2Model": PolicyLocation(
+        file_name="qwen2", class_name="Qwen2ModelPolicy"
+    ),
+    "transformers.models.qwen2.modeling_qwen2.Qwen2ForCausalLM": PolicyLocation(
+        file_name="qwen2", class_name="Qwen2ForCausalLMPolicy"
+    ),
+    "transformers.models.qwen2.modeling_qwen2.Qwen2ForSequenceClassification": PolicyLocation(
+        file_name="qwen2", class_name="Qwen2ForSequenceClassificationPolicy"
+    ),
+    # command
+    "transformers.models.cohere.modeling_cohere.CohereModel": PolicyLocation(
+        file_name="command", class_name="CommandModelPolicy"
+    ),
+    "transformers.models.cohere.modeling_cohere.CohereForCausalLM": PolicyLocation(
+        file_name="command", class_name="CommandForCausalLMPolicy"
+    ),
 }
 
-_INFER_POLICY_LIST = {
-    # LlaMa
-    "transformers.models.llama.modeling_llama.LlamaModel": PolicyLocation(
-        file_name="llama", class_name="LlamaModelInferPolicy"
-    ),
-    "transformers.models.llama.modeling_llama.LlamaForCausalLM": PolicyLocation(
-        file_name="llama", class_name="LlamaModelInferPolicy"
-    ),
-    # Bloom
-    "transformers.models.bloom.modeling_bloom.BloomModel": PolicyLocation(
-        file_name="bloom", class_name="BloomModelInferPolicy"
-    ),
-    "transformers.models.bloom.modeling_bloom.BloomForCausalLM": PolicyLocation(
-        file_name="bloom", class_name="BloomModelInferPolicy"
-    ),
-    # ChatGLM2
-    "colossalai.shardformer.modeling.chatglm2_6b.modeling_chatglm.ChatGLMModel": PolicyLocation(
-        file_name="chatglm2", class_name="ChatGLM2InferPolicy"
-    ),
-    "colossalai.shardformer.modeling.chatglm2_6b.modeling_chatglm.ChatGLMForConditionalGeneration": PolicyLocation(
-        file_name="chatglm2", class_name="ChatGLM2ForConditionalGenerationInferPolicy"
-    ),
-}
 
-
-def import_policy(policy_location: PolicyLocation, inference_only: Optional[bool] = False) -> Policy:
+def import_policy(policy_location: PolicyLocation) -> Policy:
     """
     Dynamically import a Policy class based on the policy location.
     """
-    if inference_only:
-        module_name = f"colossalai.inference.tensor_parallel.policies.{policy_location.file_name}"
-    else:
-        module_name = f"colossalai.shardformer.policies.{policy_location.file_name}"
+    module_name = f"colossalai.shardformer.policies.{policy_location.file_name}"
     module = importlib.import_module(module_name)
     return getattr(module, policy_location.class_name)
 
@@ -194,10 +247,20 @@ def _fullname(obj):
     module = klass.__module__
     if module == "builtins":
         return klass.__qualname__  # avoid outputs like 'builtins.str'
+    # patch custom models which are not in transformers
+    # it can be like 'transformers_modules.THUDM.chatglm3-6b.103caa40027ebfd8450289ca2f278eac4ff26405.modeling_chatglm' (from huggingface hub)
+    # or like 'transformers_modules.chatglm.modeling_chatglm' (from local directory)
+    if module.startswith("peft"):
+        klass = obj.base_model.model.__class__
+        module = klass.__module__
+    if module.startswith("transformers_modules"):
+        split_module = module.split(".")
+        if len(split_module) >= 2:
+            module = f"{split_module[0]}.{split_module[-1]}"
     return module + "." + klass.__qualname__
 
 
-def get_autopolicy(model: nn.Module, inference_only: Optional[bool] = False) -> Policy:
+def get_autopolicy(model: nn.Module) -> Policy:
     r"""
     Return the auto policy for the model
 
@@ -208,15 +271,11 @@ def get_autopolicy(model: nn.Module, inference_only: Optional[bool] = False) -> 
         :class:`Policy`: The auto policy for the model
     """
     full_name = _fullname(model)
-    if inference_only:
-        policy_location = _INFER_POLICY_LIST.get(full_name, None)
-    else:
-        policy_location = _POLICY_LIST.get(full_name, None)
-
+    policy_location = _POLICY_LIST.get(full_name, None)
     if policy_location is None:
         raise NotImplementedError(
-            f"Auto policy for {model.__class__.__qualname__} is not implemented\n. Supported models are {list(_POLICY_LIST.keys())} and {list(_INFER_POLICY_LIST.keys())}"
+            f"Auto policy for {model.__class__.__qualname__} ({full_name}) is not implemented\n. Supported models are {list(_POLICY_LIST.keys())}"
         )
     else:
-        policy = import_policy(policy_location, inference_only)
+        policy = import_policy(policy_location)
     return policy()

@@ -33,6 +33,7 @@ This license shall be governed and construed in accordance with the laws of Peop
 
 Note that the license is subject to update to a more comprehensive version.  For any questions related to the license and copyright, please contact us at glm-130b@googlegroups.com.
 """
+
 """ PyTorch ChatGLM model. """
 
 import copy
@@ -181,7 +182,7 @@ class RotaryEmbedding(nn.Module):
 
         cache = torch.stack([torch.cos(idx_theta), torch.sin(idx_theta)], dim=-1)
 
-        # this is to mimic the behaviour of complex32, else we will get different results
+        # this is to mimic the behavior of complex32, else we will get different results
         if dtype in (torch.float16, torch.bfloat16, torch.int8):
             cache = cache.bfloat16() if dtype == torch.bfloat16 else cache.half()
         return cache
@@ -290,7 +291,7 @@ class CoreAttention(torch.nn.Module):
             # [sk, b, np, hn] -> [sk, b * np, hn]
             key_layer = key_layer.view(output_size[3], output_size[0] * output_size[1], -1)
 
-            # preallocting input tensor: [b * np, sq, sk]
+            # preallocating input tensor: [b * np, sq, sk]
             matmul_input_buffer = torch.empty(
                 output_size[0] * output_size[1],
                 output_size[2],
@@ -400,7 +401,6 @@ class SelfAttention(torch.nn.Module):
         )
 
         self.core_attention = CoreAttention(config, self.layer_number)
-
         # Output.
         self.dense = nn.Linear(
             self.projection_size,
@@ -873,7 +873,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
 
         self.rotary_pos_emb = RotaryEmbedding(
             rotary_dim // 2,
-            original_impl=config.original_rope,
+            # original_impl=config.original_rope, # config has no attribute original_rope
             device=device,
             dtype=config.torch_dtype,
         )
@@ -1290,7 +1290,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         if has_default_max_length and generation_config.max_new_tokens is None:
             warnings.warn(
                 f"Using `max_length`'s default ({generation_config.max_length}) to control the generation length. "
-                "This behaviour is deprecated and will be removed from the config in v5 of Transformers -- we"
+                "This behavior is deprecated and will be removed from the config in v5 of Transformers -- we"
                 " recommend using `max_new_tokens` to control the maximum length of the generation.",
                 UserWarning,
             )

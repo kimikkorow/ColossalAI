@@ -47,7 +47,7 @@ default_inference_kwargs = {
     "calculate_loss": True,
     "all_classes": None,
     "language": "Chinese",
-    "pretrain": False,
+    "calculate_overall_loss": False,
     "max_new_tokens": 32,
 }
 
@@ -78,7 +78,9 @@ def get_prompt(line: Dict, dataset_name: str, logger: DistributedLogger) -> Dict
             option_string = "ABCDEFG"
             count = len(line["options"])
 
-            input = "问题：" + line["question"] + " " + "从以下选项中选择：" + " ".join(line["options"]) + "\n" + "答案："
+            input = (
+                "问题：" + line["question"] + " " + "从以下选项中选择：" + " ".join(line["options"]) + "\n" + "答案："
+            )
 
             all_classes = list(option_string[0:count])
 
@@ -99,11 +101,20 @@ def get_prompt(line: Dict, dataset_name: str, logger: DistributedLogger) -> Dict
 
 # process few-shot raw_prompts
 def combine_prompt(prompt_path, dataset_name, load_explanation=True, chat_mode=False):
+    demostrations = []
+    demostration_en = "Here are the answers for the problems in the exam."
+    demostration_zh = "以下是考试中各个问题的答案。"
+
+    if dataset_name in english_qa_datasets or dataset_name in english_cloze_datasets:
+        demostrations.append(demostration_en)
+    elif dataset_name in chinese_qa_datasets or dataset_name in chinese_cloze_datasets:
+        demostrations.append(demostration_zh)
+
     skip_passage = False
     if dataset_name == "sat-en-without-passage":
         skip_passage = True
         dataset_name = "sat-en"
-    demostrations = []
+
     # read the prompts by context and explanation
     context_row = [0, 1, 3, 5, 7, 9]
     explanation_row = [0, 2, 4, 6, 8, 10]
@@ -141,7 +152,15 @@ def combine_prompt(prompt_path, dataset_name, load_explanation=True, chat_mode=F
             )
         elif dataset_name in chinese_qa_datasets:
             question_input = (
-                "问题：" + passage + " " + question + "\n" + "从以下选项中选择：" + " ".join(options) + "\n" + "答案：{}".format(label)
+                "问题："
+                + passage
+                + " "
+                + question
+                + "\n"
+                + "从以下选项中选择："
+                + " ".join(options)
+                + "\n"
+                + "答案：{}".format(label)
             )
         elif dataset_name in english_cloze_datasets:
             question_input = "Question: ".format(idx + 1) + question + "\n" + "Answer: {}".format(answer)
@@ -153,7 +172,7 @@ def combine_prompt(prompt_path, dataset_name, load_explanation=True, chat_mode=F
         if chat_mode:
             demostrations.append((question_input,))
         else:
-            demostrations.append(question_input + "\n")
+            demostrations.append(question_input)
 
     return demostrations
 
@@ -178,7 +197,7 @@ class AGIEvalDataset(BaseDataset):
     """
 
     @staticmethod
-    def load(path: str, logger: DistributedLogger, few_shot: bool) -> List[Dict]:
+    def load(path: str, logger: DistributedLogger, few_shot: bool, *args, **kwargs) -> List[Dict]:
         dataset = {"test": {}}
 
         files = glob.glob(os.path.join(path, "*.jsonl"))
@@ -190,7 +209,7 @@ class AGIEvalDataset(BaseDataset):
         for file in files:
             dataset_name = os.path.basename(file)[0 : -len(".jsonl")]
 
-            few_shot_data = []
+            few_shot_data = None
             if few_shot:
                 # process demo once if it is few-shot-CoT
                 few_shot_data = combine_prompt(prompt_path, dataset_name, load_explanation=False, chat_mode=False)

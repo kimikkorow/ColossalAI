@@ -10,6 +10,8 @@ import torch
 import torch.multiprocessing as mp
 from packaging import version
 
+from colossalai.accelerator import get_accelerator
+
 
 def parameterize(argument: str, values: List[Any]) -> Callable:
     """
@@ -174,7 +176,7 @@ def rerun_if_address_is_in_use():
     else:
         exception = Exception
 
-    func_wrapper = rerun_on_exception(exception_type=exception, pattern=".*Address already in use.*")
+    func_wrapper = rerun_on_exception(exception_type=exception, pattern=".*(A|a)ddress already in use.*")
     return func_wrapper
 
 
@@ -198,7 +200,7 @@ def skip_if_not_enough_gpus(min_gpus: int):
 
     def _wrap_func(f):
         def _execute_by_gpu_num(*args, **kwargs):
-            num_avail_gpu = torch.cuda.device_count()
+            num_avail_gpu = get_accelerator().device_count()
             if num_avail_gpu >= min_gpus:
                 f(*args, **kwargs)
 
@@ -262,14 +264,35 @@ def clear_cache_before_run():
 
     def _wrap_func(f):
         def _clear_cache(*args, **kwargs):
-            torch.cuda.empty_cache()
-            torch.cuda.reset_peak_memory_stats()
-            torch.cuda.reset_max_memory_allocated()
-            torch.cuda.reset_max_memory_cached()
-            torch.cuda.synchronize()
+            get_accelerator().empty_cache()
+            get_accelerator().reset_peak_memory_stats()
+            get_accelerator().reset_max_memory_allocated()
+            get_accelerator().reset_max_memory_cached()
+            get_accelerator().synchronize()
             gc.collect()
             f(*args, **kwargs)
 
         return _clear_cache
 
     return _wrap_func
+
+
+class DummyDataloader:
+    def __init__(self, data_gen_fn: Callable, length: int = 10):
+        self.data_gen_fn = data_gen_fn
+        self.length = length
+        self.step = 0
+
+    def __iter__(self):
+        self.step = 0
+        return self
+
+    def __next__(self):
+        if self.step < self.length:
+            self.step += 1
+            return self.data_gen_fn()
+        else:
+            raise StopIteration
+
+    def __len__(self):
+        return self.length

@@ -16,7 +16,7 @@ from tests.kit.model_zoo import model_zoo
 
 @parameterize("lazy_init", [True, False])
 def check_shardformer_with_ddp(lazy_init: bool):
-    sub_model_zoo = model_zoo.get_sub_registry("transformers_gpt")
+    sub_model_zoo = model_zoo.get_sub_registry("transformers_gpt", exclude="transformers_gptj")
 
     # create shardformer
     # ranks: [0, 1, 2, 3]
@@ -71,7 +71,7 @@ def check_shardformer_with_ddp(lazy_init: bool):
 
 def run_dist(rank, world_size, port):
     disable_existing_loggers()
-    colossalai.launch(config={}, rank=rank, world_size=world_size, host="localhost", port=port, backend="nccl")
+    colossalai.launch(rank=rank, world_size=world_size, host="localhost", port=port, backend="nccl")
     check_shardformer_with_ddp()
 
 

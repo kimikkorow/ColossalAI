@@ -77,7 +77,7 @@ git clone https://github.com/hpcaitech/ColossalAI.git
 cd ColossalAI
 
 # install colossalai
-CUDA_EXT=1 pip install .
+BUILD_EXT=1 pip install .
 ```
 
 #### Step 3: Accelerate with flash attention by xformers (Optional)
@@ -202,6 +202,8 @@ python main.py --logdir /tmp/ -t -b configs/Teyvat/train_colossalai_teyvat.yaml
 ```
 
 ## Inference
+if you want to test with pretrain model,as bellow:
+python scripts/txt2img.py --prompt "a photograph of an astronaut riding a horse" --plms    --outdir ./output     --ckpt 512-base-ema.ckpt     --config configs/train_ddp.yaml
 
 You can get your training last.ckpt and train config.yaml in your `--logdir`, and run by
 ```
@@ -254,7 +256,7 @@ You may contact us or participate in the following ways:
 1. [Leaving a Star ⭐](https://github.com/hpcaitech/ColossalAI/stargazers) to show your like and support. Thanks!
 2. Posting an [issue](https://github.com/hpcaitech/ColossalAI/issues/new/choose), or submitting a PR on GitHub follow the guideline in [Contributing](https://github.com/hpcaitech/ColossalAI/blob/main/CONTRIBUTING.md).
 3. Join the Colossal-AI community on
-[Slack](https://join.slack.com/t/colossalaiworkspace/shared_invite/zt-z7b26eeb-CBp7jouvu~r0~lcFzX832w),
+[Slack](https://github.com/hpcaitech/public_assets/tree/main/colossalai/contact/slack),
 and [WeChat(微信)](https://raw.githubusercontent.com/hpcaitech/public_assets/main/colossalai/img/WeChat.png "qrcode") to share your ideas.
 4. Send your official proposal to email contact@hpcaitech.com
 

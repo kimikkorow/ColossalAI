@@ -1,11 +1,10 @@
 import math
-from typing import Optional
+from typing import Optional, Tuple, Union
 
+import numpy as np
 import torch
 import torch.distributed as dist
-from torch import Tensor, inf
 from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
-from torch.distributed import ProcessGroup
 
 
 def flatten(input_):
@@ -193,52 +192,6 @@ def calculate_global_norm_from_list(norm_list):
     return math.sqrt(total_norm)
 
 
-def compute_norm(gradients: Tensor, dp_group: ProcessGroup, tp_group: ProcessGroup, norm_type: int = 2) -> int:
-    """Clips gradient norm of an iterable of parameters.
-    This is adapted from torch.nn.utils.clip_grad.clip_grad_norm_ and
-    added functionality to handle model parallel parameters.
-
-    Args:
-        gradients (Tensor): The gradients to compute norm
-        dp_group (ProcessGroup): The process group of ZeRO Data Parallelism
-        tp_group (ProcessGroup): The process group of Tensor Parallelism
-        norm_type (int, optional): type of the used p-norm, Can be ``'inf'`` for infinity norm. Defaults to 2.
-
-    Returns:
-        int: The total norm of given gradients
-    """
-
-    norm_type = float(norm_type)
-    if norm_type == inf:
-        total_norm = max(g.data.abs().max() for g in gradients)
-        total_norm_cuda = torch.cuda.FloatTensor([float(total_norm)])
-        dist.all_reduce(total_norm_cuda, op=torch.distributed.ReduceOp.MAX, group=dp_group)
-
-        # Take max across all GPUs.
-        if tp_group is not None:
-            dist.all_reduce(tensor=total_norm_cuda, op=torch.distributed.ReduceOp.MAX)
-        total_norm = total_norm_cuda[0].item()
-    else:
-        total_norm = 0.0
-        for g in gradients:
-            param_norm = g.data.double().norm(2)
-            total_norm += param_norm.item() ** 2
-
-        # Sum across all model parallel GPUs.
-        total_norm_cuda = torch.cuda.FloatTensor([float(total_norm)])
-        torch.distributed.all_reduce(total_norm_cuda, op=torch.distributed.ReduceOp.SUM, group=dp_group)
-
-        if tp_group is not None:
-            dist.all_reduce(tensor=total_norm_cuda, op=torch.distributed.ReduceOp.SUM, group=tp_group)
-
-        total_norm = total_norm_cuda[0].item() ** (1.0 / norm_type)
-
-    if total_norm == float("inf") or total_norm == -float("inf") or total_norm != total_norm:
-        total_norm = -1
-
-    return total_norm
-
-
 def sync_tensor(flat_tensor, tensor_list):
     """
     Synchronize the flattened tensor and unflattened tensor list. When
@@ -257,3 +210,42 @@ def sync_tensor(flat_tensor, tensor_list):
     # update the tensor data
     for p, q in zip(tensor_list, updated_params):
         p.data = q.data
+
+
+def all_gather_into_flat_tensor_nd(
+    output_tensor: torch.Tensor,
+    input_tensor: torch.Tensor,
+    group: Union[dist.ProcessGroup, Tuple[dist.ProcessGroup, ...]],
+    async_op: bool = False,
+):
+    if isinstance(group, dist.ProcessGroup):
+        group = (group,)
+    sizes = [dist.get_world_size(pg) for pg in group]
+    ranks = [dist.get_rank(pg) for pg in group]
+    for i, pg in list(enumerate(group))[::-1]:
+        if i == 0:
+            out = output_tensor
+        else:
+            prev_sizes = sizes[:i]
+            prev_ranks = ranks[:i]
+            chunks = output_tensor.chunk(np.prod(prev_sizes))
+            out = chunks[np.ravel_multi_index(prev_ranks, prev_sizes)]
+        handle = dist.all_gather_into_tensor(out, input_tensor, group=pg, async_op=async_op)
+        input_tensor = out
+    return handle
+
+
+def get_nd_world_size(group) -> int:
+    if isinstance(group, tuple):
+        return int(np.prod([dist.get_world_size(pg) for pg in group]))
+    else:
+        return dist.get_world_size(group)
+
+
+def get_nd_rank(group) -> int:
+    if isinstance(group, tuple):
+        return np.ravel_multi_index(
+            tuple(dist.get_rank(group=pg) for pg in group), [dist.get_world_size(pg) for pg in group]
+        )
+    else:
+        return dist.get_rank(group)

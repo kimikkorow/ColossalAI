@@ -11,6 +11,7 @@ from torch.utils._pytree import tree_map
 from colossalai.logging import get_dist_logger
 
 from .construction import ConstructorManager
+from .pretrained import PretrainedManager
 
 import colossalai._analyzer._subclasses._meta_registration  # noqa
 
@@ -103,7 +104,7 @@ def _data_tolist(tensor: torch.Tensor) -> list:
     return tensor.data.tolist()
 
 
-def _convert_cls(tensor: "LazyTensor", target: torch.Tensor) -> torch.Tensor:
+def _convert_cls(tensor: "LazyTensor", target: torch.Tensor, requires_grad=None) -> torch.Tensor:
     """Convert a lazy tensor's class to target's class, with target's data.
 
     The reason why we change the class of a lazy tensor in-place is that this can easily handle shared modules/parameters, which is common in huggingface models.
@@ -116,13 +117,14 @@ def _convert_cls(tensor: "LazyTensor", target: torch.Tensor) -> torch.Tensor:
     Returns:
         torch.Tensor: the converted tensor
     """
+    requires_grad = target.requires_grad if requires_grad is None else requires_grad
     cls_to_become = Parameter if isinstance(tensor, Parameter) else torch.Tensor
     tensor.__class__ = cls_to_become
     if cls_to_become is Parameter:
         # to fit UninitializedParameter
         delattr(tensor, "_is_param")
     tensor.data = target
-    tensor.requires_grad = target.requires_grad
+    tensor.requires_grad = requires_grad
     # subclass of torch.Tensor does not have tolist() method
     # overwrite this method after materialization or distribution
     tensor.tolist = MethodType(_data_tolist, tensor)
@@ -211,9 +213,10 @@ class LazyTensor(torch.Tensor):
         Returns:
             torch.Tensor: The materialized tensor (self).
         """
+        requires_grad = self.requires_grad
         target = self._materialize_data()
         self.clean()
-        return _convert_cls(self, target)
+        return _convert_cls(self, target, requires_grad=requires_grad)
 
     def clean(self) -> None:
         """Clean all stored operations, meta data and materialized data, which prevents memory leaking. This should be called after all tensors are materialized."""
@@ -471,30 +474,11 @@ class LazyTensor(torch.Tensor):
 class LazyInitContext:
     """Context manager for lazy initialization. Enables initializing the model without allocating real memory.
 
-    Usage:
-        1. The model is initialized, but no real memory is allocated.
-        >>> ctx = LazyInitContext()
-        >>> with ctx:
-        >>>     model = MyModel().cuda()
-
-        2. The model is initialized with ``MetaTensor`` as weights, but still no real memory is allocated.
-        >>> with ctx.traceable(model):
-        >>>     gm = symbolic_trace(model, meta_args=meta_args)
-        >>> # Solve the execution strategy and apply the strategy to the model
-        >>> strategy = StrategyAndSpec()
-
-        3. The model is initialized with ``torch.Tensor`` as weights, and real memory is allocated. (single device)
-        >>> model = ctx.materialize(model)
-
-        3. The model is initialized with sharded ``torch.Tensor`` as weights, and real memory is allocated. (distributed scenario)
-        >>> model = apply_strategy_to_all_params(model, strategy)
-        >>> model = ctx.distribute(model)
-
-    Warnings:
-        This API is still experimental and further modifications can be made to it.
-        For example:
-            1. Quantization strategies can be applied before allocating real memory.
-            2. Lazy initialization seems slower than normal initialization.
+    Args:
+        tensor_cls (Union[_MyTensor, LazyTensor], optional): This is only for test. Defaults to LazyTensor.
+        default_device (Optional[Union[torch.device, str, int]], optional): Defalt device for initialization.
+            If it's cuda, initilization will be accelerated, but cuda memory will be allocated. By default, it's cpu.
+            Defaults to None.
     """
 
     _replaced: bool = False
@@ -527,9 +511,9 @@ class LazyInitContext:
             # factory_like functions (eg. torch.empty_like())
             def wrapper(*args, **kwargs):
                 orig_t = args[0]
-                return self.tensor_cls(
-                    orig_target, *orig_t.shape, *args[1:], device=orig_t.device, dtype=orig_t.dtype, **kwargs
-                )
+                device = kwargs.pop("device", orig_t.device)
+                dtype = kwargs.pop("dtype", orig_t.dtype)
+                return self.tensor_cls(orig_target, *orig_t.shape, *args[1:], device=device, dtype=dtype, **kwargs)
 
             return wrapper, target
 
@@ -595,11 +579,13 @@ class LazyInitContext:
         )
 
         ConstructorManager.apply(overrides)
+        PretrainedManager.inject()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.tensor_cls.default_device = self.old_default_device
         LazyInitContext._replaced = False
         ConstructorManager.clear()
+        PretrainedManager.recover()
 
     @staticmethod
     def materialize(module: nn.Module, verbose: bool = False) -> nn.Module:

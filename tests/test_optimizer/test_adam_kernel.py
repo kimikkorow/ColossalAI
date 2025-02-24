@@ -8,14 +8,13 @@ import pytest
 import torch
 from torch import Tensor
 
-from colossalai.utils import get_current_device, multi_tensor_applier
+from colossalai.accelerator import get_accelerator
+from colossalai.utils import multi_tensor_applier
 
 _FUSED_ALLOWED_P_G_TYPES = [
     (torch.float, torch.half),
     (torch.float, torch.float),
-    (torch.half, torch.float),
     (torch.half, torch.half),
-    (torch.bfloat16, torch.float),
     (torch.float, torch.bfloat16),
     (torch.bfloat16, torch.bfloat16),
 ]
@@ -23,7 +22,6 @@ _FUSED_ALLOWED_P_G_TYPES = [
 _CPU_ALLOWED_P_G_TYPES = [
     (torch.float, torch.half),
     (torch.float, torch.float),
-    (torch.half, torch.float),
     (torch.half, torch.half),
 ]
 
@@ -67,11 +65,11 @@ class TorchAdamKernel(AdamKernel):
 class FusedAdamKernel(AdamKernel):
     def __init__(self, lr: float, beta1: float, beta2: float, eps: float, weight_decay: float, use_adamw: bool) -> None:
         super().__init__(lr, beta1, beta2, eps, weight_decay, use_adamw)
-        from colossalai.kernel.op_builder import FusedOptimBuilder
+        from colossalai.kernel.kernel_loader import FusedOptimizerLoader
 
-        fused_optim = FusedOptimBuilder().load()
+        fused_optim = FusedOptimizerLoader().load()
         self.fused_adam = fused_optim.multi_tensor_adam
-        self.dummy_overflow_buf = torch.cuda.IntTensor([0])
+        self.dummy_overflow_buf = torch.tensor([0], dtype=torch.int, device=get_accelerator().get_current_device())
 
     def update(self, step: int, param: Tensor, grad: Tensor, exp_avg: Tensor, exp_avg_sq: Tensor):
         multi_tensor_applier(
@@ -93,9 +91,9 @@ class FusedAdamKernel(AdamKernel):
 class CPUAdamKernel(AdamKernel):
     def __init__(self, lr: float, beta1: float, beta2: float, eps: float, weight_decay: float, use_adamw: bool) -> None:
         super().__init__(lr, beta1, beta2, eps, weight_decay, use_adamw)
-        from colossalai.kernel.op_builder import CPUAdamBuilder
+        from colossalai.kernel.kernel_loader import CPUAdamLoader
 
-        cpu_optim = CPUAdamBuilder().load()
+        cpu_optim = CPUAdamLoader().load()
 
         self.cpu_adam_op = cpu_optim.CPUAdamOptimizer(lr, beta1, beta2, eps, weight_decay, use_adamw)
 
@@ -138,8 +136,8 @@ def check_adam_kernel(
     master_exp_avg_sq = torch.zeros_like(master_p)
     p = master_p.clone().to(p_dtype)
     g = master_g.clone().to(g_dtype)
-    exp_avg = master_exp_avg.clone()
-    exp_avg_sq = master_exp_avg_sq.clone()
+    exp_avg = master_exp_avg.clone().to(p_dtype)
+    exp_avg_sq = master_exp_avg_sq.clone().to(p_dtype)
 
     for step in range(1, 1 + n_steps):
         torch_adam.update(step, master_p, master_g, master_exp_avg, master_exp_avg_sq)
@@ -158,7 +156,9 @@ def test_fused_adam_kernel(adamw, weight_decay, p_dtype, g_dtype):
         rtol, atol = 1e-3, 1e-3
     if p_dtype is torch.bfloat16 or g_dtype is torch.bfloat16:
         rtol, atol = 4e-3, 4e-3
-    check_adam_kernel(FusedAdamKernel, adamw, weight_decay, p_dtype, g_dtype, get_current_device(), 3, rtol, atol)
+    check_adam_kernel(
+        FusedAdamKernel, adamw, weight_decay, p_dtype, g_dtype, get_accelerator().get_current_device(), 3, rtol, atol
+    )
 
 
 @pytest.mark.parametrize("adamw", [False, True])

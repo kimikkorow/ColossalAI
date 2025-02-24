@@ -1,3 +1,4 @@
+import warnings
 from functools import partial
 from typing import Callable, Dict, List
 
@@ -10,7 +11,7 @@ import colossalai.shardformer.layer as col_nn
 from ..modeling.bert import (
     BertPipelineForwards,
     bert_sequence_parallel_forward_fn,
-    get_bert_flash_attention_forward,
+    get_jit_fused_bert_intermediate_forward,
     get_jit_fused_bert_output_forward,
     get_jit_fused_bert_self_output_forward,
 )
@@ -21,7 +22,7 @@ __all__ = [
     "BertPolicy",
     "BertModelPolicy",
     "BertForPreTrainingPolicy",
-    "BertLMdHeadModelPolicy",
+    "BertLMHeadModelPolicy",
     "BertForMaskedLMPolicy",
     "BertForNextSentencePredictionPolicy",
     "BertForSequenceClassificationPolicy",
@@ -36,33 +37,50 @@ class BertPolicy(Policy):
         pass
 
     def preprocess(self):
-        # reshape the embedding layer
-        r"""
-        Reshape the Embedding layer to make the embedding dimension divisible by world_size
-        """
-        # TODO:
-        if self.shard_config.enable_tensor_parallelism:
-            vocab_size = self.model.config.vocab_size
-            world_size = self.shard_config.tensor_parallel_size
-            if vocab_size % world_size != 0:
-                new_vocab_size = vocab_size + world_size - vocab_size % world_size
-                self.model.resize_token_embeddings(new_vocab_size)
+        self.tie_weight = self.tie_weight_check()
+        self.enable_bias_gelu_fused = self.shard_config.enable_jit_fused and self.model.config.hidden_act == "gelu"
         return self.model
 
     def module_policy(self):
         from transformers.models.bert.modeling_bert import (
             BertEmbeddings,
+            BertIntermediate,
             BertLayer,
             BertModel,
             BertOutput,
-            BertSelfAttention,
             BertSelfOutput,
         )
 
         policy = {}
-        use_sequence_parallel = self.shard_config.enable_sequence_parallelism
-        overlap = self.shard_config.enable_sequence_overlap
+
+        embedding_cls = None
         if self.shard_config.enable_tensor_parallelism:
+            embedding_cls = col_nn.VocabParallelEmbedding1D
+        else:
+            if self.tie_weight:
+                embedding_cls = col_nn.PaddingEmbedding
+
+        if self.shard_config.enable_fused_normalization:
+            norm_cls = col_nn.FusedLayerNorm
+        else:
+            norm_cls = col_nn.LayerNorm
+
+        sp_mode = self.shard_config.sequence_parallelism_mode or None
+        assert sp_mode != "all_to_all", "all_to_all sequence parallelism is not supported for Bert"
+        if sp_mode == "ring":
+            warnings.warn(
+                f"For Bert, sequence parallelism is currently not support mode {sp_mode}, will set to be split_gather"
+            )
+            sp_mode = "split_gather"
+
+        sp_partial_derived = sp_mode == "split_gather"
+
+        use_zbv = self.pipeline_stage_manager is not None and self.pipeline_stage_manager.use_zbv
+
+        if self.shard_config.enable_tensor_parallelism:
+            assert (
+                self.model.config.num_attention_heads % self.shard_config.tensor_parallel_size == 0
+            ), f"The number of attention heads must be divisible by tensor parallel size."
             policy[BertLayer] = ModulePolicyDescription(
                 attribute_replacement={
                     "attention.self.all_head_size": self.model.config.hidden_size
@@ -78,17 +96,29 @@ class BertPolicy(Policy):
                     SubModuleReplacementDescription(
                         suffix="attention.self.query",
                         target_module=col_nn.Linear1D_Col,
-                        kwargs={"seq_parallel": use_sequence_parallel, "overlap": overlap},
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
                     ),
                     SubModuleReplacementDescription(
                         suffix="attention.self.key",
                         target_module=col_nn.Linear1D_Col,
-                        kwargs={"seq_parallel": use_sequence_parallel, "overlap": overlap},
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
                     ),
                     SubModuleReplacementDescription(
                         suffix="attention.self.value",
                         target_module=col_nn.Linear1D_Col,
-                        kwargs={"seq_parallel": use_sequence_parallel, "overlap": overlap},
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
                     ),
                     SubModuleReplacementDescription(
                         suffix="attention.self.dropout",
@@ -97,7 +127,11 @@ class BertPolicy(Policy):
                     SubModuleReplacementDescription(
                         suffix="attention.output.dense",
                         target_module=col_nn.Linear1D_Row,
-                        kwargs={"seq_parallel": use_sequence_parallel},
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
                     ),
                     SubModuleReplacementDescription(
                         suffix="attention.output.dropout",
@@ -106,12 +140,21 @@ class BertPolicy(Policy):
                     SubModuleReplacementDescription(
                         suffix="intermediate.dense",
                         target_module=col_nn.Linear1D_Col,
-                        kwargs={"seq_parallel": use_sequence_parallel, "overlap": overlap},
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "skip_bias_add": self.enable_bias_gelu_fused,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
                     ),
                     SubModuleReplacementDescription(
                         suffix="output.dense",
                         target_module=col_nn.Linear1D_Row,
-                        kwargs={"seq_parallel": use_sequence_parallel},
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
                     ),
                     SubModuleReplacementDescription(
                         suffix="output.dropout",
@@ -123,61 +166,165 @@ class BertPolicy(Policy):
             policy[BertEmbeddings] = ModulePolicyDescription(
                 sub_module_replacement=[
                     SubModuleReplacementDescription(
-                        suffix="word_embeddings",
-                        target_module=col_nn.VocabParallelEmbedding1D,
+                        suffix="dropout",
+                        target_module=col_nn.DropoutForReplicatedInput,
                     ),
+                ]
+            )
+            if self.enable_bias_gelu_fused:
+                self.append_or_create_method_replacement(
+                    description={
+                        "forward": get_jit_fused_bert_intermediate_forward(),
+                    },
+                    policy=policy,
+                    target_key=BertIntermediate,
+                )
+
+        elif use_zbv:
+            policy[BertLayer] = ModulePolicyDescription(
+                sub_module_replacement=[
+                    SubModuleReplacementDescription(
+                        suffix="attention.self.query",
+                        target_module=col_nn.LinearWithGradAccum,
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
+                    ),
+                    SubModuleReplacementDescription(
+                        suffix="attention.self.key",
+                        target_module=col_nn.LinearWithGradAccum,
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
+                    ),
+                    SubModuleReplacementDescription(
+                        suffix="attention.self.value",
+                        target_module=col_nn.LinearWithGradAccum,
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
+                    ),
+                    SubModuleReplacementDescription(
+                        suffix="attention.self.dropout",
+                        target_module=col_nn.DropoutForParallelInput,
+                    ),
+                    SubModuleReplacementDescription(
+                        suffix="attention.output.dense",
+                        target_module=col_nn.LinearWithGradAccum,
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
+                    ),
+                    SubModuleReplacementDescription(
+                        suffix="attention.output.dropout",
+                        target_module=col_nn.DropoutForParallelInput,
+                    ),
+                    SubModuleReplacementDescription(
+                        suffix="intermediate.dense",
+                        target_module=col_nn.LinearWithGradAccum,
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "skip_bias_add": self.enable_bias_gelu_fused,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
+                    ),
+                    SubModuleReplacementDescription(
+                        suffix="output.dense",
+                        target_module=col_nn.LinearWithGradAccum,
+                        kwargs={
+                            "seq_parallel_mode": sp_mode,
+                            "fp8_communication": self.shard_config.fp8_communication,
+                            "use_zbv": use_zbv,
+                        },
+                    ),
+                    SubModuleReplacementDescription(
+                        suffix="output.dropout",
+                        target_module=col_nn.DropoutForParallelInput,
+                    ),
+                ],
+            )
+
+            policy[BertEmbeddings] = ModulePolicyDescription(
+                sub_module_replacement=[
                     SubModuleReplacementDescription(
                         suffix="dropout",
                         target_module=col_nn.DropoutForReplicatedInput,
                     ),
                 ]
             )
+            if self.enable_bias_gelu_fused:
+                self.append_or_create_method_replacement(
+                    description={
+                        "forward": get_jit_fused_bert_intermediate_forward(),
+                    },
+                    policy=policy,
+                    target_key=BertIntermediate,
+                )
 
-        if use_sequence_parallel:
+        if sp_mode == "split_gather":
             self.append_or_create_method_replacement(
                 description={"forward": bert_sequence_parallel_forward_fn(self.shard_config)},
                 policy=policy,
                 target_key=BertModel,
             )
 
-        # optimization configuration
-        if self.shard_config.enable_fused_normalization:
-            # Handle bert layer
+        if embedding_cls is not None:
             self.append_or_create_submodule_replacement(
                 description=[
                     SubModuleReplacementDescription(
-                        suffix="attention.output.LayerNorm",
-                        target_module=col_nn.FusedLayerNorm,
-                    ),
-                    SubModuleReplacementDescription(
-                        suffix="output.LayerNorm",
-                        target_module=col_nn.FusedLayerNorm,
-                    ),
-                ],
-                policy=policy,
-                target_key=BertLayer,
-            )
-            # handle embedding layer
-            self.append_or_create_submodule_replacement(
-                description=[
-                    SubModuleReplacementDescription(
-                        suffix="LayerNorm",
-                        target_module=col_nn.FusedLayerNorm,
+                        suffix="word_embeddings",
+                        target_module=embedding_cls,
+                        kwargs=(
+                            {
+                                "fp8_communication": self.shard_config.fp8_communication,
+                            }
+                            if self.shard_config.enable_tensor_parallelism
+                            else {}
+                        ),
                     )
                 ],
                 policy=policy,
                 target_key=BertEmbeddings,
             )
 
-        # use flash attention
-        if self.shard_config.enable_flash_attention:
-            self.append_or_create_method_replacement(
-                description={
-                    "forward": get_bert_flash_attention_forward(),
-                },
-                policy=policy,
-                target_key=BertSelfAttention,
-            )
+        # optimization configuration
+        # Handle bert layer
+        self.append_or_create_submodule_replacement(
+            description=[
+                SubModuleReplacementDescription(
+                    suffix="attention.output.LayerNorm",
+                    target_module=norm_cls,
+                    kwargs={"sp_partial_derived": sp_partial_derived},
+                ),
+                SubModuleReplacementDescription(
+                    suffix="output.LayerNorm",
+                    target_module=norm_cls,
+                    kwargs={"sp_partial_derived": sp_partial_derived},
+                ),
+            ],
+            policy=policy,
+            target_key=BertLayer,
+        )
+        # handle embedding layer
+        self.append_or_create_submodule_replacement(
+            description=[
+                SubModuleReplacementDescription(
+                    suffix="LayerNorm",
+                    target_module=norm_cls,
+                )
+            ],
+            policy=policy,
+            target_key=BertEmbeddings,
+        )
 
         # use jit operator
         if self.shard_config.enable_jit_fused:
@@ -207,7 +354,23 @@ class BertPolicy(Policy):
         if self.shard_config.enable_tensor_parallelism:
             self.append_or_create_submodule_replacement(
                 description=SubModuleReplacementDescription(
-                    suffix="decoder", target_module=col_nn.Linear1D_Col, kwargs={"gather_output": True}
+                    suffix="decoder",
+                    target_module=col_nn.VocabParallelLMHead1D,
+                    kwargs={
+                        "gather_output": True,
+                        "make_vocab_size_divisible_by": self.shard_config.make_vocab_size_divisible_by,
+                        "fp8_communication": self.shard_config.fp8_communication,
+                    },
+                ),
+                policy=base_policy,
+                target_key=BertLMPredictionHead,
+            )
+        else:
+            self.append_or_create_submodule_replacement(
+                description=SubModuleReplacementDescription(
+                    suffix="decoder",
+                    target_module=col_nn.PaddingLMHead,
+                    kwargs={"make_vocab_size_divisible_by": self.shard_config.make_vocab_size_divisible_by},
                 ),
                 policy=base_policy,
                 target_key=BertLMPredictionHead,
@@ -234,7 +397,9 @@ class BertPolicy(Policy):
             "_load_from_state_dict": col_nn.ParallelModule._load_from_state_dict,
         }
         self.append_or_create_method_replacement(
-            description=method_replacement, policy=base_policy, target_key=BertLMPredictionHead
+            description=method_replacement,
+            policy=base_policy,
+            target_key=BertLMPredictionHead,
         )
         return base_policy
 
@@ -242,27 +407,43 @@ class BertPolicy(Policy):
         return self.model
 
     def set_pipeline_forward(self, model_cls: nn.Module, new_forward: Callable, policy: Dict) -> None:
-        """If under pipeline parallel setting, replacing the original forward method of huggingface
-        to customized forward method, and add this changing to policy."""
-        if self.pipeline_stage_manager:
-            stage_manager = self.pipeline_stage_manager
-            if self.model.__class__.__name__ == "BertModel":
-                module = self.model
-            else:
-                module = self.model.bert
+        """
+        If under pipeline parallel setting, replacing the original forward method of huggingface
+        to customized forward method, and add this changing to policy.
+        """
+        if self.pipeline_stage_manager is None:
+            return
 
-            layers_per_stage = Policy.distribute_layers(len(module.encoder.layer), stage_manager.num_stages)
-            stage_index = Policy.get_stage_index(layers_per_stage, stage_manager.stage)
+        stage_manager = self.pipeline_stage_manager
+        if self.model.__class__.__name__ == "BertModel":
+            module = self.model
+        else:
+            module = self.model.bert
+
+        if stage_manager.is_interleave:
+            layers_per_stage = stage_manager.distribute_layers(len(module.encoder.layer))
+            stage_manager.stage_indices = stage_manager.get_stage_index(layers_per_stage)
             method_replacement = {
                 "forward": partial(
-                    new_forward, stage_manager=stage_manager, stage_index=stage_index, shard_config=self.shard_config
+                    new_forward,
+                    stage_manager=stage_manager,
+                    shard_config=self.shard_config,
                 )
             }
-            self.append_or_create_method_replacement(
-                description=method_replacement, policy=policy, target_key=model_cls
-            )
 
-        return
+        else:
+            layers_per_stage = stage_manager.distribute_layers(len(module.encoder.layer))
+            stage_index = stage_manager.get_stage_index(layers_per_stage)
+            method_replacement = {
+                "forward": partial(
+                    new_forward,
+                    stage_manager=stage_manager,
+                    stage_index=stage_index,
+                    shard_config=self.shard_config,
+                )
+            }
+
+        self.append_or_create_method_replacement(description=method_replacement, policy=policy, target_key=model_cls)
 
     def get_held_layers(self) -> List[Module]:
         """Get pipeline layers for current stage."""
@@ -275,29 +456,40 @@ class BertPolicy(Policy):
         stage_manager = self.pipeline_stage_manager
 
         held_layers = []
-        layers_per_stage = self.distribute_layers(len(module.encoder.layer), stage_manager.num_stages)
-        if stage_manager.is_first_stage():
-            held_layers.append(module.embeddings)
-        start_idx, end_idx = self.get_stage_index(layers_per_stage, stage_manager.stage)
-        held_layers.extend(module.encoder.layer[start_idx:end_idx])
-        if stage_manager.is_last_stage():
-            held_layers.append(module.pooler)
+        if stage_manager.is_interleave:
+            assert stage_manager.num_model_chunks is not None
+            layers_per_stage = stage_manager.distribute_layers(len(module.encoder.layer))
+            stage_indices = stage_manager.get_stage_index(layers_per_stage)
+            if stage_manager.is_first_stage(ignore_chunk=True):
+                held_layers.append(module.embeddings)
+            for start_idx, end_idx in stage_indices:
+                held_layers.extend(module.encoder.layer[start_idx:end_idx])
+            if stage_manager.is_last_stage(ignore_chunk=True):
+                held_layers.append(module.pooler)
+
+        else:
+            layers_per_stage = stage_manager.distribute_layers(len(module.encoder.layer))
+            if stage_manager.is_first_stage():
+                held_layers.append(module.embeddings)
+            start_idx, end_idx = stage_manager.get_stage_index(layers_per_stage)
+            held_layers.extend(module.encoder.layer[start_idx:end_idx])
+            if stage_manager.is_last_stage():
+                held_layers.append(module.pooler)
 
         return held_layers
 
 
 # BertModel
 class BertModelPolicy(BertPolicy):
-    def __init__(self) -> None:
-        super().__init__()
-
     def module_policy(self):
         policy = super().module_policy()
         from transformers.models.bert.modeling_bert import BertModel
 
         if self.pipeline_stage_manager:
             self.set_pipeline_forward(
-                model_cls=BertModel, new_forward=BertPipelineForwards.bert_model_forward, policy=policy
+                model_cls=BertModel,
+                new_forward=BertPipelineForwards.bert_model_forward,
+                policy=policy,
             )
         return policy
 
@@ -313,9 +505,6 @@ class BertModelPolicy(BertPolicy):
 
 # BertForPreTraining
 class BertForPreTrainingPolicy(BertPolicy):
-    def __init__(self) -> None:
-        super().__init__()
-
     def module_policy(self):
         policy = super().module_policy()
         policy = self.add_lm_head_policy(policy)
@@ -334,7 +523,7 @@ class BertForPreTrainingPolicy(BertPolicy):
         """Get pipeline layers for current stage"""
         held_layers = super().get_held_layers()
         stage_manager = self.pipeline_stage_manager
-        if stage_manager.is_last_stage():
+        if stage_manager.is_last_stage(ignore_chunk=True):
             held_layers.append(self.model.cls)
 
         return held_layers
@@ -355,9 +544,6 @@ class BertForPreTrainingPolicy(BertPolicy):
 
 # BertLMHeadModel
 class BertLMHeadModelPolicy(BertPolicy):
-    def __init__(self) -> None:
-        super().__init__()
-
     def module_policy(self):
         policy = super().module_policy()
         policy = self.add_lm_head_policy(policy)
@@ -366,7 +552,9 @@ class BertLMHeadModelPolicy(BertPolicy):
 
         if self.pipeline_stage_manager:
             self.set_pipeline_forward(
-                model_cls=BertLMHeadModel, new_forward=BertPipelineForwards.bert_lm_head_model_forward, policy=policy
+                model_cls=BertLMHeadModel,
+                new_forward=BertPipelineForwards.bert_lm_head_model_forward,
+                policy=policy,
             )
         return policy
 
@@ -376,7 +564,7 @@ class BertLMHeadModelPolicy(BertPolicy):
         """
         held_layers = super().get_held_layers()
         stage_manager = self.pipeline_stage_manager
-        if stage_manager.is_last_stage():
+        if stage_manager.is_last_stage(ignore_chunk=True):
             held_layers.append(self.model.cls)
         return held_layers
 
@@ -396,9 +584,6 @@ class BertLMHeadModelPolicy(BertPolicy):
 
 # BertForMaskedLM
 class BertForMaskedLMPolicy(BertPolicy):
-    def __init__(self) -> None:
-        super().__init__()
-
     def module_policy(self):
         policy = super().module_policy()
         policy = self.add_lm_head_policy(policy)
@@ -407,7 +592,9 @@ class BertForMaskedLMPolicy(BertPolicy):
 
         if self.pipeline_stage_manager:
             self.set_pipeline_forward(
-                model_cls=BertForMaskedLM, new_forward=BertPipelineForwards.bert_for_masked_lm_forward, policy=policy
+                model_cls=BertForMaskedLM,
+                new_forward=BertPipelineForwards.bert_for_masked_lm_forward,
+                policy=policy,
             )
         return policy
 
@@ -417,7 +604,7 @@ class BertForMaskedLMPolicy(BertPolicy):
         """
         held_layers = super().get_held_layers()
         stage_manager = self.pipeline_stage_manager
-        if stage_manager.is_last_stage():
+        if stage_manager.is_last_stage(ignore_chunk=True):
             held_layers.append(self.model.cls)
         return held_layers
 
@@ -437,9 +624,6 @@ class BertForMaskedLMPolicy(BertPolicy):
 
 # BertForSequenceClassification
 class BertForSequenceClassificationPolicy(BertPolicy):
-    def __init__(self) -> None:
-        super().__init__()
-
     def module_policy(self):
         from transformers.models.bert.modeling_bert import BertForSequenceClassification
 
@@ -472,7 +656,7 @@ class BertForSequenceClassificationPolicy(BertPolicy):
         """
         held_layers = super().get_held_layers()
         stage_manager = self.pipeline_stage_manager
-        if stage_manager.is_last_stage():
+        if stage_manager.is_last_stage(ignore_chunk=True):
             held_layers.append(self.model.dropout)
             held_layers.append(self.model.classifier)
         return held_layers
@@ -484,9 +668,6 @@ class BertForSequenceClassificationPolicy(BertPolicy):
 
 # BertForTokenClassification
 class BertForTokenClassificationPolicy(BertPolicy):
-    def __init__(self) -> None:
-        super().__init__()
-
     def module_policy(self):
         from transformers.models.bert.modeling_bert import BertForTokenClassification
 
@@ -519,7 +700,7 @@ class BertForTokenClassificationPolicy(BertPolicy):
         """
         held_layers = super().get_held_layers()
         stage_manager = self.pipeline_stage_manager
-        if stage_manager.is_last_stage():
+        if stage_manager.is_last_stage(ignore_chunk=True):
             held_layers.append(self.model.dropout)
             held_layers.append(self.model.classifier)
         return held_layers
@@ -531,9 +712,6 @@ class BertForTokenClassificationPolicy(BertPolicy):
 
 # BertForNextSentencePrediction
 class BertForNextSentencePredictionPolicy(BertPolicy):
-    def __init__(self) -> None:
-        super().__init__()
-
     def module_policy(self):
         policy = super().module_policy()
         from transformers.models.bert.modeling_bert import BertForNextSentencePrediction
@@ -553,7 +731,7 @@ class BertForNextSentencePredictionPolicy(BertPolicy):
         """
         held_layers = super().get_held_layers()
         stage_manager = self.pipeline_stage_manager
-        if stage_manager.is_last_stage():
+        if stage_manager.is_last_stage(ignore_chunk=True):
             held_layers.append(self.model.cls)
         return held_layers
 
@@ -564,9 +742,6 @@ class BertForNextSentencePredictionPolicy(BertPolicy):
 
 # BertForMultipleChoice
 class BertForMultipleChoicePolicy(BertPolicy):
-    def __init__(self) -> None:
-        super().__init__()
-
     def module_policy(self):
         from transformers.models.bert.modeling_bert import BertForMultipleChoice
 
@@ -599,7 +774,7 @@ class BertForMultipleChoicePolicy(BertPolicy):
         """
         held_layers = super().get_held_layers()
         stage_manager = self.pipeline_stage_manager
-        if stage_manager.is_last_stage():
+        if stage_manager.is_last_stage(ignore_chunk=True):
             held_layers.append(self.model.dropout)
             held_layers.append(self.model.classifier)
         return held_layers
@@ -610,9 +785,6 @@ class BertForMultipleChoicePolicy(BertPolicy):
 
 
 class BertForQuestionAnsweringPolicy(BertPolicy):
-    def __init__(self) -> None:
-        super().__init__()
-
     def module_policy(self):
         from transformers.models.bert.modeling_bert import BertForQuestionAnswering
 
@@ -632,7 +804,7 @@ class BertForQuestionAnsweringPolicy(BertPolicy):
         """
         held_layers = super().get_held_layers()
         stage_manager = self.pipeline_stage_manager
-        if stage_manager.is_last_stage():
+        if stage_manager.is_last_stage(ignore_chunk=True):
             held_layers.append(self.model.qa_outputs)
         return held_layers
 

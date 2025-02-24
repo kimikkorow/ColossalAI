@@ -35,6 +35,7 @@ def check_forward_backward(model_fn, data_gen_fn, output_transform_fn, loss_fn, 
     bloom = unwrap_model(org_model, "BloomModel", "transformer")
     sharded_bloom = unwrap_model(sharded_model, "BloomModel", "transformer")
 
+    norm_layer_for_check = ["word_embeddings_layernorm", "h[0].input_layernorm"]
     row_layer_for_check = ["h[0].self_attention.query_key_value", "word_embeddings"]
     col_layer_for_check = ["h[0].self_attention.dense"]
 
@@ -51,8 +52,21 @@ def check_forward_backward(model_fn, data_gen_fn, output_transform_fn, loss_fn, 
         col_layer_grads = get_grad_tensors_for_check(
             bloom, sharded_bloom, col_layer_for_check, tp_group, atol=atol, rtol=rtol, dim=1, verbose=False
         )
+
+        norm_layer_grads = get_grad_tensors_for_check(
+            bloom,
+            sharded_bloom,
+            norm_layer_for_check,
+            tp_group,
+            atol=atol,
+            rtol=rtol,
+            dim=1,
+            verbose=False,
+        )
+
         grads_to_check.update(col_layer_grads)
         grads_to_check.update(row_layer_grads)
+        grads_to_check.update(norm_layer_grads)
 
     # optimizer executes step
     org_optimizer.step()
@@ -86,12 +100,24 @@ def check_forward_backward(model_fn, data_gen_fn, output_transform_fn, loss_fn, 
     "test_config",
     [
         {
+            "tp_size": 4,
+            "pp_size": 1,
+            "num_microbatches": 1,
+            "enable_sequence_parallelism": True,
+            "sequence_parallelism_mode": "ring",
+            "enable_flash_attention": False,
+            "use_lazy_init": True,
+            "precision": "fp32",
+            "initial_scale": 1,
+        },
+        {
             "tp_size": 2,
             "pp_size": 2,
             "num_microbatches": 4,
             "enable_all_optimization": True,
             "use_lazy_init": True,
             "precision": "fp16",
+            "zero_stage": 1,
             "initial_scale": 1,
         },
         {
@@ -101,17 +127,6 @@ def check_forward_backward(model_fn, data_gen_fn, output_transform_fn, loss_fn, 
             "enable_all_optimization": False,
             "use_lazy_init": False,
             "precision": "fp32",
-        },
-        {"tp_size": 4, "pp_size": 1, "enable_all_optimization": True, "use_lazy_init": False, "precision": "fp32"},
-        {"tp_size": 2, "pp_size": 1, "enable_all_optimization": True, "use_lazy_init": False, "precision": "fp32"},
-        {
-            "tp_size": 2,
-            "pp_size": 1,
-            "enable_all_optimization": True,
-            "use_lazy_init": True,
-            "zero_stage": 2,
-            "precision": "fp16",
-            "initial_scale": 1,
         },
         {
             "tp_size": 1,
@@ -173,13 +188,13 @@ def run_bloom_3d_test(test_config):
 
 def check_bloom(rank, world_size, port):
     disable_existing_loggers()
-    colossalai.launch(config={}, rank=rank, world_size=world_size, host="localhost", port=port, backend="nccl")
+    colossalai.launch(rank=rank, world_size=world_size, host="localhost", port=port, backend="nccl")
     run_bloom_test()
 
 
 def check_bloom_3d(rank, world_size, port):
     disable_existing_loggers()
-    colossalai.launch(config={}, rank=rank, world_size=world_size, host="localhost", port=port, backend="nccl")
+    colossalai.launch(rank=rank, world_size=world_size, host="localhost", port=port, backend="nccl")
     run_bloom_3d_test()
 
 

@@ -7,7 +7,8 @@
       "items": [
         "get_started/installation",
         "get_started/run_demo",
-        "get_started/reading_roadmap"
+        "get_started/reading_roadmap",
+        "get_started/bonus"
       ]
     },
     {
@@ -55,6 +56,8 @@
         },
         "features/pipeline_parallel",
         "features/nvme_offload",
+        "features/lazy_init",
+        "features/distributed_optimizers",
         "features/cluster_utils"
       ]
     },
@@ -63,7 +66,6 @@
       "label": "Advanced Tutorials",
       "collapsed": true,
       "items": [
-        "advanced_tutorials/train_vit_using_pipeline_parallelism",
         "advanced_tutorials/train_vit_with_hybrid_parallelism",
         "advanced_tutorials/train_gpt_using_hybrid_parallelism",
         "advanced_tutorials/meet_gemini",

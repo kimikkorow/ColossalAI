@@ -3,13 +3,14 @@ from typing import Optional
 
 import torch
 
-from colossalai.kernel.op_builder import CPUAdamBuilder
+from colossalai.kernel.kernel_loader import CPUAdamLoader
 
 from .nvme_optimizer import NVMeOptimizer
 
 
 class CPUAdam(NVMeOptimizer):
-    """Implements Adam algorithm.
+    """
+    Implements Adam algorithm.
 
     Supports parameters updating on both GPU and CPU, depending on the device of parameters.
     But the parameters and gradients should on the same device:
@@ -76,8 +77,17 @@ class CPUAdam(NVMeOptimizer):
         default_args = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, bias_correction=bias_correction)
         super(CPUAdam, self).__init__(model_params, default_args, nvme_offload_fraction, nvme_offload_dir)
         self.adamw_mode = adamw_mode
-        cpu_adam = CPUAdamBuilder().load()
+        cpu_adam = CPUAdamLoader().load()
+        # if you find yourself stuck here, make sure that you install colossalai with BUILD_EXT=1 specification
         self.cpu_adam_op = cpu_adam.CPUAdamOptimizer(lr, betas[0], betas[1], eps, weight_decay, adamw_mode)
+
+    def load_state_dict(self, state_dict):
+        super().load_state_dict(state_dict)
+        for group in self.param_groups:
+            for p in group["params"]:
+                state = self.state[p]
+                if "step" in state and isinstance(state["step"], torch.Tensor):
+                    state["step"] = int(state["step"].item())
 
     def torch_adam_update(
         self,
@@ -131,9 +141,6 @@ class CPUAdam(NVMeOptimizer):
                 target_device = p.device
                 if len(state) == 0:
                     state["step"] = 0
-
-                    # FIXME(ver217): CPU adam kernel only supports fp32 states now
-                    assert p.dtype is torch.float, "CPUAdam only support fp32 parameters"
                     # gradient momentums
                     state["exp_avg"] = torch.zeros_like(p, device=target_device)
                     # gradient variances

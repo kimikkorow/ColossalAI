@@ -4,13 +4,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Union
 
-import numpy as np
 import torch.nn as nn
 from torch import Tensor
 from torch.nn import Module
 
 from colossalai.pipeline.stage_manager import PipelineStageManager
 
+from ..layer.normalization import BaseLayerNorm
 from ..layer.parallel_module import ParallelModule
 from ..shard.shard_config import ShardConfig
 
@@ -28,8 +28,9 @@ class SubModuleReplacementDescription:
         kwargs (Dict[str, Any]): the dictionary used to pass extra arguments to the `ParallelModule.from_native_module` method.
         ignore_if_not_exist (bool): if the submodule does not exist, ignore it or raise an exception
     """
+
     suffix: str
-    target_module: ParallelModule
+    target_module: Union[ParallelModule, BaseLayerNorm]
     kwargs: Dict[str, Any] = None
     ignore_if_not_exist: bool = False
 
@@ -50,10 +51,11 @@ class ModulePolicyDescription:
                         new_weight = shard_rowwise(weight, process_group)
                         module.weight = torch.nn.Parameter(new_weight)
                     ```
-        sub_module_replacement (List[SubModuleReplacementDescription]): each element in the list is a ParamReplacementDescription
+        sub_module_replacement (List[SubModuleReplacementDescription]): each element in the list is a SubModuleReplacementDescription
                     object which specifies the module to be replaced and the target module used to replacement.
         method_replace (Dict[str, Callable]): key is the method name, value is the method for replacement
     """
+
     attribute_replacement: Dict[str, Any] = None
     param_replacement: List[Callable] = None
     sub_module_replacement: List[SubModuleReplacementDescription] = None
@@ -73,11 +75,11 @@ class Policy(ABC):
     def __init__(self) -> None:
         self.shard_config: Optional[ShardConfig] = None
         self.model: Optional[Module] = None
+        self.is_causal = None  # Whether we're doing causal lm, i.e. using cross entropy
 
     def set_model(self, model: nn.Module) -> None:
         r"""
         Set model as an attribute of the Policy object so that we can access the model's attributes.
-
         Args:
             model (:class:`nn.Module`): The model to be perform
         """
@@ -86,11 +88,11 @@ class Policy(ABC):
     def set_shard_config(self, shard_config: ShardConfig) -> None:
         r"""
         Set shard config as an attribute of the Policy object.
-
         Args:
             shard_config (:class:`ShardConfig`): The shard config to be perform
         """
         self.shard_config = shard_config
+
         self.config_sanity_check()
 
     @property
@@ -197,30 +199,11 @@ class Policy(ABC):
         """
         return []
 
-    @staticmethod
-    def distribute_layers(num_layers: int, num_stages: int) -> List[int]:
-        """Divide layers into stages"""
-        quotient = num_layers // num_stages
-        remainder = num_layers % num_stages
-
-        # calculate the num_layers per stage
-        layers_per_stage = [quotient] * num_stages
-
-        # deal with the rest layers
-        if remainder > 0:
-            start_position = num_stages // 2 - remainder // 2
-            for i in range(start_position, start_position + remainder):
-                layers_per_stage[i] += 1
-        return layers_per_stage
-
-    @staticmethod
-    def get_stage_index(layers_per_stage: List[int], stage: int) -> List[int]:
-        """
-        get the start index and end index of layers for each stage.
-        """
-        num_layers_per_stage_accumulated = np.insert(np.cumsum(layers_per_stage), 0, 0)
-
-        start_idx = num_layers_per_stage_accumulated[stage]
-        end_idx = num_layers_per_stage_accumulated[stage + 1]
-
-        return [start_idx, end_idx]
+    def tie_weight_check(self):
+        input_embedding = self.model.get_input_embeddings()
+        output_embedding = self.model.get_output_embeddings()
+        return (
+            input_embedding is not None
+            and output_embedding is not None
+            and id(input_embedding.weight) == id(output_embedding.weight)
+        )

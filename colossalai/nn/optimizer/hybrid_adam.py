@@ -2,8 +2,8 @@ from typing import Any, Optional
 
 import torch
 
-from colossalai.kernel.op_builder import FusedOptimBuilder
-from colossalai.utils import multi_tensor_applier
+from colossalai.kernel.kernel_loader import FusedOptimizerLoader
+from colossalai.utils import get_current_device, multi_tensor_applier
 
 from .cpu_adam import CPUAdam
 
@@ -84,9 +84,10 @@ class HybridAdam(CPUAdam):
             nvme_offload_fraction,
             nvme_offload_dir,
         )
-        fused_optim = FusedOptimBuilder().load()
-        self.gpu_adam_op = fused_optim.multi_tensor_adam
-        self._dummy_overflow_buf = torch.cuda.IntTensor([0])
+        if torch.cuda.is_available():
+            fused_optim = FusedOptimizerLoader().load()
+            self.gpu_adam_op = fused_optim.multi_tensor_adam
+            self._dummy_overflow_buf = torch.tensor([0], dtype=torch.int, device=get_current_device())
 
     @torch.no_grad()
     def step(self, closure=None, div_scale: float = -1):
@@ -108,9 +109,6 @@ class HybridAdam(CPUAdam):
                 target_device = p.device
                 if len(state) == 0:
                     state["step"] = 0
-
-                    # FIXME(ver217): CPU adam kernel only supports fp32 states now
-                    assert p.dtype is torch.float, "HybridAdam only support fp32 parameters"
                     # gradient momentums
                     state["exp_avg"] = torch.zeros_like(p, device=target_device)
                     # gradient variances
@@ -121,11 +119,11 @@ class HybridAdam(CPUAdam):
                 group_step = state["step"]
                 beta1, beta2 = group["betas"]
 
-                if target_device.type == "cpu":
-                    assert state["exp_avg"].device.type == "cpu", "exp_avg should stay on cpu"
-                    assert state["exp_avg_sq"].device.type == "cpu", "exp_avg should stay on cpu"
+                if target_device.type == "cpu" or target_device.type == "npu":
+                    assert state["exp_avg"].device.type in ("cpu", "npu"), "exp_avg should stay on cpu"
+                    assert state["exp_avg_sq"].device.type in ("cpu", "npu"), "exp_avg should stay on cpu"
                     self._pre_update(p, "exp_avg", "exp_avg_sq")
-                    if p.grad.dtype is torch.bfloat16:
+                    if p.grad.dtype is torch.bfloat16 or p.grad.device.type == "npu":
                         # cpu adam kernel does not support bf16 now
                         bias_correction1 = 1 - beta1 ** state["step"]
                         bias_correction2 = 1 - beta2 ** state["step"]

@@ -1,6 +1,6 @@
 # 基于Chunk内存管理的零冗余优化器 (ZeRO)
 
-作者: [Hongxiu Liu](https://github.com/ver217), [Jiarui Fang](https://github.com/feifeibear), [Zijian Ye](https://github.com/ZijianYY)
+作者: [Hongxin Liu](https://github.com/ver217), [Jiarui Fang](https://github.com/feifeibear), [Zijian Ye](https://github.com/ZijianYY)
 
 **前置教程:**
 
@@ -174,7 +174,7 @@ def main():
     SEQ_LEN = 1024
     VOCAB_SIZE = 50257
     NUM_STEPS = 10
-    colossalai.launch_from_torch(config={})
+    colossalai.launch_from_torch()
 
     # build criterion
     criterion = GPTLMLoss()

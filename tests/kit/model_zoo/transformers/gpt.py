@@ -14,11 +14,11 @@ def data_gen():
     # Generated from following code snippet
     #
     # from transformers import GPT2Tokenizer
-    # input = 'Hello, my dog is cute'
+    # input = 'Hello, my dog is cute is cute' (last two words repeated to satisfy length requirement)
     # tokenized_input = tokenizer(input, return_tensors='pt')
     # input_ids = tokenized_input['input_ids']
     # attention_mask = tokenized_input['attention_mask']
-    input_ids = torch.tensor([[15496, 11, 616, 3290, 318, 13779, 318, 13779]], dtype=torch.int64)
+    input_ids = torch.tensor([[22, 11, 616, 4, 5, 13, 318, 345]], dtype=torch.int64)
     attention_mask = torch.tensor([[1, 1, 1, 1, 1, 1, 1, 1]], dtype=torch.int64)
     return dict(input_ids=input_ids, attention_mask=attention_mask)
 
@@ -27,7 +27,16 @@ def data_gen_for_lm():
     # LM data gen
     # the `labels` of LM is the token of the output, cause no padding, use `input_ids` as `labels`
     data = data_gen()
-    data["labels"] = data["input_ids"].clone()
+
+    # Test padded sequence for Ring Attention
+    padding = torch.zeros(1, data["input_ids"].shape[1] // 2, dtype=torch.long)
+    data["input_ids"] = torch.cat([data["input_ids"], padding], dim=1)
+    data["attention_mask"] = torch.cat([data["attention_mask"], padding], dim=1)
+
+    ignore_idx = -100
+    labels = data["input_ids"].clone()
+    labels[~data["attention_mask"].bool()] = ignore_idx
+    data["labels"] = labels
     return data
 
 
@@ -61,7 +70,7 @@ def date_gen_for_double_heads():
     num_choices = 2
     batch_size = 2
     input_ids = torch.tensor(
-        [[15496, 11, 616, 3290, 318, 13779, 318, 13779], [15496, 11, 616, 3290, 318, 13779, 318, 13779]],
+        [[46, 11, 616, 432, 318, 19, 318, 555], [777, 11, 235, 333, 318, 231, 468, 136]],
         dtype=torch.int64,
     )
     attention_mask = torch.tensor([[1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1]], dtype=torch.int64)
@@ -87,21 +96,23 @@ output_transform_fn = lambda x: x
 
 # define loss function
 loss_fn_for_gpt2_model = lambda x: torch.nn.functional.mse_loss(
-    x.last_hidden_state, torch.ones_like(x.last_hidden_state)
+    x["last_hidden_state"], torch.ones_like(x["last_hidden_state"])
 )
-loss_fn = lambda x: x.loss
+loss_fn = lambda x: x["loss"]
 
 config = transformers.GPT2Config(
     n_layer=2,
     n_head=4,
-    vocab_size=50258,
+    n_embd=128,
+    vocab_size=1024,
     attn_pdrop=0,
     embd_pdrop=0,
     resid_pdrop=0,
     summary_first_dropout=0,
     hidden_dropout=0,
     problem_type="single_label_classification",
-    pad_token_id=50256,
+    pad_token_id=1022,
+    tie_word_embeddings=True,
 )
 
 config_for_token_classification = copy.deepcopy(config)

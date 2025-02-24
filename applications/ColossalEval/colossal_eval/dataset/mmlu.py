@@ -11,13 +11,13 @@ default_inference_kwargs = {
     "calculate_loss": True,
     "all_classes": ["A", "B", "C", "D"],
     "language": "English",
-    "pretrain": False,
+    "calculate_overall_loss": False,
     "max_new_tokens": 32,
 }
 
 
-def get_few_shot_data(data: List[Dict]):
-    few_shot_data = []
+def get_few_shot_data(data: List[Dict], subject):
+    few_shot_data = [f"The following are multiple choice questions (with answers) about {subject}."]
     for i in data:
         few_shot_data.append(i["input"] + i["target"])
     return few_shot_data
@@ -31,7 +31,7 @@ class MMLUDataset(BaseDataset):
     """
 
     @staticmethod
-    def load(path: str, logger: DistributedLogger, few_shot: bool) -> List[Dict]:
+    def load(path: str, logger: DistributedLogger, few_shot: bool, *args, **kwargs) -> List[Dict]:
         dataset = {"dev": {}, "test": {}}
         for split in ["dev", "test"]:
             files = os.listdir(os.path.join(path, split))
@@ -50,7 +50,7 @@ class MMLUDataset(BaseDataset):
 
                 if split == "test" and few_shot:
                     dataset[split][subject]["inference_kwargs"]["few_shot_data"] = get_few_shot_data(
-                        dataset["dev"][subject]["data"]
+                        dataset["dev"][subject]["data"], subject
                     )
 
                 with open(file_dir, encoding="utf-8") as f:

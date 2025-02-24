@@ -9,14 +9,15 @@
    <a href="https://www.colossalai.org/"> Documentation </a> |
    <a href="https://github.com/hpcaitech/ColossalAI/tree/main/examples"> Examples </a> |
    <a href="https://github.com/hpcaitech/ColossalAI/discussions"> Forum </a> |
-   <a href="https://medium.com/@hpcaitech"> Blog </a></h3>
+   <a href="https://colossalai.org/zh-Hans/docs/get_started/bonus/">GPU Cloud Playground </a> |
+   <a href="https://hpc-ai.com/blog"> Blog </a></h3>
 
    [![GitHub Repo stars](https://img.shields.io/github/stars/hpcaitech/ColossalAI?style=social)](https://github.com/hpcaitech/ColossalAI/stargazers)
    [![Build](https://github.com/hpcaitech/ColossalAI/actions/workflows/build_on_schedule.yml/badge.svg)](https://github.com/hpcaitech/ColossalAI/actions/workflows/build_on_schedule.yml)
    [![Documentation](https://readthedocs.org/projects/colossalai/badge/?version=latest)](https://colossalai.readthedocs.io/en/latest/?badge=latest)
    [![CodeFactor](https://www.codefactor.io/repository/github/hpcaitech/colossalai/badge)](https://www.codefactor.io/repository/github/hpcaitech/colossalai)
    [![HuggingFace badge](https://img.shields.io/badge/%F0%9F%A4%97HuggingFace-Join-yellow)](https://huggingface.co/hpcai-tech)
-   [![slack badge](https://img.shields.io/badge/Slack-join-blueviolet?logo=slack&amp)](https://join.slack.com/t/colossalaiworkspace/shared_invite/zt-z7b26eeb-CBp7jouvu~r0~lcFzX832w)
+   [![slack badge](https://img.shields.io/badge/Slack-join-blueviolet?logo=slack&amp)](https://github.com/hpcaitech/public_assets/tree/main/colossalai/contact/slack)
    [![WeChat badge](https://img.shields.io/badge/微信-加入-green?logo=wechat&amp)](https://raw.githubusercontent.com/hpcaitech/public_assets/main/colossalai/img/WeChat.png)
 
 
@@ -24,17 +25,34 @@
 
 </div>
 
+## Get Started with Colossal-AI Without Setup
+
+Access high-end, on-demand compute for your research instantly—no setup needed.
+
+Sign up now and get $10 in credits!
+
+Limited Academic Bonuses:
+
+* Top up $1,000 and receive 300 credits
+* Top up $500 and receive 100 credits
+
+<div align="center">
+   <a href="https://hpc-ai.com/?utm_source=github&utm_medium=social&utm_campaign=promotion-colossalai">
+   <img src="https://github.com/hpcaitech/public_assets/blob/main/colossalai/img/2.gif" width="850" />
+   </a>
+</div>
+
+
 ## Latest News
-* [2023/09] [70 Billion Parameter LLaMA2 Model Training Accelerated by 195%](https://www.hpc-ai.tech/blog/70b-llama2-training)
-* [2023/07] [HPC-AI Tech Raises 22 Million USD in Series A Funding](https://www.hpc-ai.tech/blog/hpc-ai-tech-raises-22-million-usd-in-series-a-funding-to-fuel-team-expansion-and-business-growth)
-* [2023/07] [65B Model Pretraining Accelerated by 38%, Best Practices for Building LLaMA-Like Base Models Open-Source](https://www.hpc-ai.tech/blog/large-model-pretraining)
-* [2023/03] [ColossalChat: An Open-Source Solution for Cloning ChatGPT With a Complete RLHF Pipeline](https://medium.com/@yangyou_berkeley/colossalchat-an-open-source-solution-for-cloning-chatgpt-with-a-complete-rlhf-pipeline-5edf08fb538b)
-* [2023/03] [Intel and Colossal-AI Partner to Deliver Cost-Efficient Open-Source Solution for Protein Folding Structure Prediction](https://www.hpc-ai.tech/blog/intel-habana)
-* [2023/03] [AWS and Google Fund Colossal-AI with Startup Cloud Programs](https://www.hpc-ai.tech/blog/aws-and-google-fund-colossal-ai-with-startup-cloud-programs)
-* [2023/02] [Open Source Solution Replicates ChatGPT Training Process! Ready to go with only 1.6GB GPU Memory](https://www.hpc-ai.tech/blog/colossal-ai-chatgpt)
-* [2023/01] [Hardware Savings Up to 46 Times for AIGC and  Automatic Parallelism](https://medium.com/pytorch/latest-colossal-ai-boasts-novel-automatic-parallelism-and-offers-savings-up-to-46x-for-stable-1453b48f3f02)
-* [2022/11] [Diffusion Pretraining and Hardware Fine-Tuning Can Be Almost 7X Cheaper](https://www.hpc-ai.tech/blog/diffusion-pretraining-and-hardware-fine-tuning-can-be-almost-7x-cheaper)
-* [2022/10] [Use a Laptop to Analyze 90% of Proteins, With a Single-GPU Inference Sequence Exceeding 10,000](https://www.hpc-ai.tech/blog/use-a-laptop-to-analyze-90-of-proteins-with-a-single-gpu-inference-sequence-exceeding)
+* [2025/02] [DeepSeek 671B Fine-Tuning Guide Revealed—Unlock the Upgraded DeepSeek Suite with One Click, AI Players Ecstatic!](https://company.hpc-ai.com/blog/shocking-release-deepseek-671b-fine-tuning-guide-revealed-unlock-the-upgraded-deepseek-suite-with-one-click-ai-players-ecstatic)
+* [2024/12] [The development cost of video generation models has saved by 50%! Open-source solutions are now available with H200 GPU vouchers](https://company.hpc-ai.com/blog/the-development-cost-of-video-generation-models-has-saved-by-50-open-source-solutions-are-now-available-with-h200-gpu-vouchers) [[code]](https://github.com/hpcaitech/Open-Sora/blob/main/scripts/train.py) [[vouchers]](https://colossalai.org/zh-Hans/docs/get_started/bonus/)
+* [2024/10] [How to build a low-cost Sora-like app? Solutions for you](https://company.hpc-ai.com/blog/how-to-build-a-low-cost-sora-like-app-solutions-for-you)
+* [2024/09] [Singapore Startup HPC-AI Tech Secures 50 Million USD in Series A Funding to Build the Video Generation AI Model and GPU Platform](https://company.hpc-ai.com/blog/singapore-startup-hpc-ai-tech-secures-50-million-usd-in-series-a-funding-to-build-the-video-generation-ai-model-and-gpu-platform)
+* [2024/09] [Reducing AI Large Model Training Costs by 30% Requires Just a Single Line of Code From FP8 Mixed Precision Training Upgrades](https://company.hpc-ai.com/blog/reducing-ai-large-model-training-costs-by-30-requires-just-a-single-line-of-code-from-fp8-mixed-precision-training-upgrades)
+* [2024/06] [Open-Sora Continues Open Source: Generate Any 16-Second 720p HD Video with One Click, Model Weights Ready to Use](https://hpc-ai.com/blog/open-sora-from-hpc-ai-tech-team-continues-open-source-generate-any-16-second-720p-hd-video-with-one-click-model-weights-ready-to-use)
+* [2024/05] [Large AI Models Inference Speed Doubled, Colossal-Inference Open Source Release](https://hpc-ai.com/blog/colossal-inference)
+* [2024/04] [Open-Sora Unveils Major Upgrade: Embracing Open Source with Single-Shot 16-Second Video Generation and 720p Resolution](https://hpc-ai.com/blog/open-soras-comprehensive-upgrade-unveiled-embracing-16-second-video-generation-and-720p-resolution-in-open-source)
+* [2024/04] [Most cost-effective solutions for inference, fine-tuning and pretraining, tailored to LLaMA3 series](https://hpc-ai.com/blog/most-cost-effective-solutions-for-inference-fine-tuning-and-pretraining-tailored-to-llama3-series)
 
 ## Table of Contents
 <ul>
@@ -43,6 +61,8 @@
  <li>
    <a href="#Colossal-AI-in-the-Real-World">Colossal-AI for Real World Applications</a>
    <ul>
+     <li><a href="#Open-Sora">Open-Sora: Revealing Complete Model Parameters, Training Details, and Everything for Sora-like Video Generation Models</a></li>
+     <li><a href="#Colossal-LLaMA-2">Colossal-LLaMA-2: One Half-Day of Training Using a Few Hundred Dollars Yields Similar Results to Mainstream Large Models, Open-Source and Commercial-Free Domain-Specific Llm Solution</a></li>
      <li><a href="#ColossalChat">ColossalChat: An Open-Source Solution for Cloning ChatGPT With a Complete RLHF Pipeline</a></li>
      <li><a href="#AIGC">AIGC: Acceleration of Stable Diffusion</a></li>
      <li><a href="#Biomedicine">Biomedicine: Acceleration of AlphaFold Protein Structure</a></li>
@@ -51,7 +71,8 @@
  <li>
    <a href="#Parallel-Training-Demo">Parallel Training Demo</a>
    <ul>
-     <li><a href="#LLaMA2">LLaMA 1/2</a></li>
+     <li><a href="#LLaMA3">LLaMA 1/2/3 </a></li>
+     <li><a href="#MoE">MoE</a></li>
      <li><a href="#GPT-3">GPT-3</a></li>
      <li><a href="#GPT-2">GPT-2</a></li>
      <li><a href="#BERT">BERT</a></li>
@@ -69,11 +90,11 @@
    </ul>
  </li>
  <li>
-   <a href="#Inference-Energon-AI-Demo">Inference (Energon-AI) Demo</a>
+   <a href="#Inference">Inference</a>
    <ul>
-     <li><a href="#GPT-3-Inference">GPT-3</a></li>
-     <li><a href="#OPT-Serving">OPT-175B Online Serving for Text Generation</a></li>
-     <li><a href="#BLOOM-Inference">176B BLOOM</a></li>
+     <li><a href="#Colossal-Inference">Colossal-Inference: Large AI  Models Inference Speed Doubled</a></li>
+     <li><a href="#Grok-1">Grok-1: 314B model of PyTorch + HuggingFace Inference</a></li>
+     <li><a href="#SwiftInfer">SwiftInfer:Breaks the Length Limit of LLM for Multi-Round Conversations with 46% Acceleration</a></li>
    </ul>
  </li>
  <li>
@@ -120,12 +141,65 @@ distributed training and inference in a few lines.
 - Friendly Usage
   - Parallelism based on the configuration file
 
-- Inference
-  - [Energon-AI](https://github.com/hpcaitech/EnergonAI)
-
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ## Colossal-AI in the Real World
+### Open-Sora
+
+[Open-Sora](https://github.com/hpcaitech/Open-Sora)：Revealing Complete Model Parameters, Training Details, and Everything for Sora-like Video Generation Models
+[[code]](https://github.com/hpcaitech/Open-Sora)
+[[blog]](https://hpc-ai.com/blog/open-sora-from-hpc-ai-tech-team-continues-open-source-generate-any-16-second-720p-hd-video-with-one-click-model-weights-ready-to-use)
+[[Model weights]](https://github.com/hpcaitech/Open-Sora?tab=readme-ov-file#model-weights)
+[[Demo]](https://github.com/hpcaitech/Open-Sora?tab=readme-ov-file#-latest-demo)
+[[GPU Cloud Playground]](https://cloud.luchentech.com/)
+[[OpenSora Image]](https://cloud.luchentech.com/doc/docs/image/open-sora/)
+
+<div align="center">
+   <a href="https://youtu.be/ilMQpU71ddI?si=J4JSPzZ03ycYmlki">
+   <img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/applications/sora/opensora-v1.2.png" width="700" />
+   </a>
+</div>
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+### Colossal-LLaMA-2
+
+[[GPU Cloud Playground]](https://cloud.luchentech.com/)
+[[LLaMA3 Image]](https://cloud.luchentech.com/doc/docs/image/llama)
+
+- 7B: One half-day of training using a few hundred dollars yields similar results to mainstream large models, open-source and commercial-free domain-specific LLM solution.
+[[code]](https://github.com/hpcaitech/ColossalAI/tree/main/applications/Colossal-LLaMA-2)
+[[blog]](https://www.hpc-ai.tech/blog/one-half-day-of-training-using-a-few-hundred-dollars-yields-similar-results-to-mainstream-large-models-open-source-and-commercial-free-domain-specific-llm-solution)
+[[HuggingFace model weights]](https://huggingface.co/hpcai-tech/Colossal-LLaMA-2-7b-base)
+[[Modelscope model weights]](https://www.modelscope.cn/models/colossalai/Colossal-LLaMA-2-7b-base/summary)
+
+- 13B: Construct refined 13B private model with just $5000 USD.
+[[code]](https://github.com/hpcaitech/ColossalAI/tree/main/applications/Colossal-LLaMA-2)
+[[blog]](https://hpc-ai.com/blog/colossal-llama-2-13b)
+[[HuggingFace model weights]](https://huggingface.co/hpcai-tech/Colossal-LLaMA-2-13b-base)
+[[Modelscope model weights]](https://www.modelscope.cn/models/colossalai/Colossal-LLaMA-2-13b-base/summary)
+
+|              Model              |  Backbone  | Tokens Consumed |     MMLU (5-shot)    | CMMLU (5-shot)| AGIEval (5-shot) | GAOKAO (0-shot) | CEval (5-shot)  |
+| :-----------------------------: | :--------: | :-------------: | :------------------: | :-----------: | :--------------: | :-------------: | :-------------: |
+|          Baichuan-7B            |     -      |      1.2T       |    42.32 (42.30)     | 44.53 (44.02) |        38.72     |       36.74     |       42.80     |
+|       Baichuan-13B-Base         |     -      |      1.4T       |    50.51 (51.60)     | 55.73 (55.30) |        47.20     |       51.41     |       53.60     |
+|       Baichuan2-7B-Base         |     -      |      2.6T       |    46.97 (54.16)     | 57.67 (57.07) |        45.76     |       52.60     |       54.00     |
+|       Baichuan2-13B-Base        |     -      |      2.6T       |    54.84 (59.17)     | 62.62 (61.97) |        52.08     |       58.25     |       58.10     |
+|           ChatGLM-6B            |     -      |      1.0T       |    39.67 (40.63)     |   41.17 (-)   |        40.10     |       36.53     |       38.90     |
+|          ChatGLM2-6B            |     -      |      1.4T       |    44.74 (45.46)     |   49.40 (-)   |        46.36     |       45.49     |       51.70     |
+|          InternLM-7B            |     -      |      1.6T       |    46.70 (51.00)     |   52.00 (-)   |        44.77     |       61.64     |       52.80     |
+|            Qwen-7B              |     -      |      2.2T       |    54.29 (56.70)     | 56.03 (58.80) |        52.47     |       56.42     |       59.60     |
+|           Llama-2-7B            |     -      |      2.0T       |    44.47 (45.30)     |   32.97 (-)   |        32.60     |       25.46     |         -       |
+| Linly-AI/Chinese-LLaMA-2-7B-hf  | Llama-2-7B |      1.0T       |        37.43         |     29.92     |        32.00     |       27.57     |         -       |
+| wenge-research/yayi-7b-llama2   | Llama-2-7B |        -        |        38.56         |     31.52     |        30.99     |       25.95     |         -       |
+| ziqingyang/chinese-llama-2-7b   | Llama-2-7B |        -        |        33.86         |     34.69     |        34.52     |       25.18     |        34.2     |
+| TigerResearch/tigerbot-7b-base  | Llama-2-7B |      0.3T       |        43.73         |     42.04     |        37.64     |       30.61     |         -       |
+|  LinkSoul/Chinese-Llama-2-7b    | Llama-2-7B |        -        |        48.41         |     38.31     |        38.45     |       27.72     |         -       |
+|       FlagAlpha/Atom-7B         | Llama-2-7B |      0.1T       |        49.96         |     41.10     |        39.83     |       33.00     |         -       |
+| IDEA-CCNL/Ziya-LLaMA-13B-v1.1   | Llama-13B  |      0.11T      |        50.25         |     40.99     |        40.04     |       30.54     |         -       |
+|  **Colossal-LLaMA-2-7b-base**   | Llama-2-7B |   **0.0085T**   |        53.06         |     49.89     |        51.48     |       58.82     |        50.2     |
+|  **Colossal-LLaMA-2-13b-base**  | Llama-2-13B |   **0.025T**    |        56.42         |     61.80     |        54.69     |       69.53     |        60.3     |
+
 
 ### ColossalChat
 
@@ -184,7 +258,7 @@ Acceleration of AIGC (AI-Generated Content) models such as [Stable Diffusion v1]
 
 - [DreamBooth Fine-tuning](https://github.com/hpcaitech/ColossalAI/tree/main/examples/images/dreambooth): Personalize your model using just 3-5 images of the desired subject.
 
-<p id="inference" align="center">
+<p id="inference-sd" align="center">
 <img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/colossalai/img/Stable%20Diffusion%20Inference.jpg" width=800/>
 </p>
 
@@ -218,13 +292,23 @@ Acceleration of [AlphaFold Protein Structure](https://alphafold.ebi.ac.uk/)
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ## Parallel Training Demo
+### LLaMA3
+<p align="center">
+<img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/examples/images/LLaMA3-70B-H100.png" width=600/>
+</p>
+
+- 70 billion parameter LLaMA3 model training accelerated by 18%
+[[code]](https://github.com/hpcaitech/ColossalAI/tree/main/examples/language/llama)
+[[GPU Cloud Playground]](https://cloud.luchentech.com/)
+[[LLaMA3 Image]](https://cloud.luchentech.com/doc/docs/image/llama)
+
 ### LLaMA2
 <p align="center">
 <img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/colossalai/img/llama2_pretraining.png" width=600/>
 </p>
 
 - 70 billion parameter LLaMA2 model training accelerated by 195%
-[[code]](https://github.com/hpcaitech/ColossalAI/tree/main/examples/language/llama2)
+[[code]](https://github.com/hpcaitech/ColossalAI/tree/main/examples/language/llama)
 [[blog]](https://www.hpc-ai.tech/blog/70b-llama2-training)
 
 ### LLaMA1
@@ -233,8 +317,17 @@ Acceleration of [AlphaFold Protein Structure](https://alphafold.ebi.ac.uk/)
 </p>
 
 - 65-billion-parameter large model pretraining accelerated by 38%
-[[code]](https://github.com/hpcaitech/ColossalAI/tree/example/llama/examples/language/llama)
+[[code]](https://github.com/hpcaitech/ColossalAI/tree/main/examples/language/llama)
 [[blog]](https://www.hpc-ai.tech/blog/large-model-pretraining)
+
+### MoE
+<p align="center">
+<img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/examples/images/MOE_training.png" width=800/>
+</p>
+
+- Enhanced MoE parallelism, Open-source MoE model training can be 9 times more efficient
+[[code]](https://github.com/hpcaitech/ColossalAI/tree/main/examples/language/openmoe)
+[[blog]](https://www.hpc-ai.tech/blog/enhanced-moe-parallelism-open-source-moe-model-training-can-be-9-times-more-efficient)
 
 ### GPT-3
 <p align="center">
@@ -305,32 +398,47 @@ Please visit our [documentation](https://www.colossalai.org/) and [examples](htt
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 
-## Inference (Energon-AI) Demo
-
-<p id="GPT-3-Inference" align="center">
-<img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/colossalai/img/inference_GPT-3.jpg" width=800/>
+## Inference
+### Colossal-Inference
+<p align="center">
+<img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/colossalai/img/inference/colossal-inference-v1-1.png" width=1000/>
 </p>
 
-- [Energon-AI](https://github.com/hpcaitech/EnergonAI): 50% inference acceleration on the same hardware
-
-<p id="OPT-Serving" align="center">
-<img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/colossalai/img/BLOOM%20serving.png" width=600/>
+<p align="center">
+<img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/colossalai/img/inference/colossal-inference-v1-2.png" width=1000/>
 </p>
 
-- [OPT Serving](https://colossalai.org/docs/advanced_tutorials/opt_service): Try 175-billion-parameter OPT online services
+ - Large AI models inference speed doubled, compared to the offline inference performance of vLLM in some cases.
+[[code]](https://github.com/hpcaitech/ColossalAI/tree/main/colossalai/inference)
+[[blog]](https://hpc-ai.com/blog/colossal-inference)
+[[GPU Cloud Playground]](https://cloud.luchentech.com/)
+[[LLaMA3 Image]](https://cloud.luchentech.com/doc/docs/image/llama)
 
-<p id="BLOOM-Inference" align="center">
-<img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/colossalai/img/BLOOM%20Inference.PNG" width=800/>
+### Grok-1
+<p id="Grok-1" align="center">
+<img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/examples/images/grok-1-inference.jpg" width=600/>
 </p>
 
-- [BLOOM](https://github.com/hpcaitech/EnergonAI/tree/main/examples/bloom): Reduce hardware deployment costs of 176-billion-parameter BLOOM by more than 10 times.
+ - 314 Billion Parameter Grok-1 Inference Accelerated by 3.8x, an easy-to-use Python + PyTorch + HuggingFace version for Inference.
+
+[[code]](https://github.com/hpcaitech/ColossalAI/tree/main/examples/language/grok-1)
+[[blog]](https://hpc-ai.com/blog/314-billion-parameter-grok-1-inference-accelerated-by-3.8x-efficient-and-easy-to-use-pytorchhuggingface-version-is-here)
+[[HuggingFace Grok-1 PyTorch model weights]](https://huggingface.co/hpcai-tech/grok-1)
+[[ModelScope Grok-1 PyTorch model weights]](https://www.modelscope.cn/models/colossalai/grok-1-pytorch/summary)
+
+### SwiftInfer
+<p id="SwiftInfer" align="center">
+<img src="https://raw.githubusercontent.com/hpcaitech/public_assets/main/colossalai/img/SwiftInfer.jpg" width=800/>
+</p>
+
+- [SwiftInfer](https://github.com/hpcaitech/SwiftInfer): Inference performance improved by 46%, open source solution breaks the length limit of LLM for multi-round conversations
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ## Installation
 
 Requirements:
-- PyTorch >= 1.11 (PyTorch 2.x in progress)
+- PyTorch >= 2.2
 - Python >= 3.7
 - CUDA >= 11.0
 - [NVIDIA GPU Compute Capability](https://developer.nvidia.com/cuda-gpus) >= 7.0 (V100/RTX20 and higher)
@@ -348,10 +456,10 @@ pip install colossalai
 
 **Note: only Linux is supported for now.**
 
-However, if you want to build the PyTorch extensions during installation, you can set `CUDA_EXT=1`.
+However, if you want to build the PyTorch extensions during installation, you can set `BUILD_EXT=1`.
 
 ```bash
-CUDA_EXT=1 pip install colossalai
+BUILD_EXT=1 pip install colossalai
 ```
 
 **Otherwise, CUDA kernels will be built during runtime when you actually need them.**
@@ -379,7 +487,7 @@ By default, we do not compile CUDA/C++ kernels. ColossalAI will build them durin
 If you want to install and enable CUDA kernel fusion (compulsory installation when using fused optimizer):
 
 ```shell
-CUDA_EXT=1 pip install .
+BUILD_EXT=1 pip install .
 ```
 
 For Users with CUDA 10.2, you can still build ColossalAI from source. However, you need to manually download the cub library and copy it to the corresponding directory.
@@ -395,7 +503,7 @@ unzip 1.8.0.zip
 cp -r cub-1.8.0/cub/ colossalai/kernel/cuda_native/csrc/kernels/include/
 
 # install
-CUDA_EXT=1 pip install .
+BUILD_EXT=1 pip install .
 ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -464,11 +572,22 @@ This project is inspired by some related projects (some by our team and some by 
 To cite this project, you can use the following BibTeX citation.
 
 ```
-@article{bian2021colossal,
-  title={Colossal-AI: A Unified Deep Learning System For Large-Scale Parallel Training},
-  author={Bian, Zhengda and Liu, Hongxin and Wang, Boxiang and Huang, Haichen and Li, Yongbin and Wang, Chuanrui and Cui, Fan and You, Yang},
-  journal={arXiv preprint arXiv:2110.14883},
-  year={2021}
+@inproceedings{10.1145/3605573.3605613,
+author = {Li, Shenggui and Liu, Hongxin and Bian, Zhengda and Fang, Jiarui and Huang, Haichen and Liu, Yuliang and Wang, Boxiang and You, Yang},
+title = {Colossal-AI: A Unified Deep Learning System For Large-Scale Parallel Training},
+year = {2023},
+isbn = {9798400708435},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3605573.3605613},
+doi = {10.1145/3605573.3605613},
+abstract = {The success of Transformer models has pushed the deep learning model scale to billions of parameters, but the memory limitation of a single GPU has led to an urgent need for training on multi-GPU clusters. However, the best practice for choosing the optimal parallel strategy is still lacking, as it requires domain expertise in both deep learning and parallel computing. The Colossal-AI system addressed the above challenge by introducing a unified interface to scale your sequential code of model training to distributed environments. It supports parallel training methods such as data, pipeline, tensor, and sequence parallelism and is integrated with heterogeneous training and zero redundancy optimizer. Compared to the baseline system, Colossal-AI can achieve up to 2.76 times training speedup on large-scale models.},
+booktitle = {Proceedings of the 52nd International Conference on Parallel Processing},
+pages = {766–775},
+numpages = {10},
+keywords = {datasets, gaze detection, text tagging, neural networks},
+location = {Salt Lake City, UT, USA},
+series = {ICPP '23}
 }
 ```
 
